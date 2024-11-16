@@ -34,9 +34,100 @@ function handleStreamResponse(stream, res, model) {
 
   stream.on("data", (chunk) => {
     buffer += chunk.toString();
-    const lines = buffer.split("\n");
-    
-    // ... rest of streaming logic ...
+    let lines = buffer.split("\n");
+
+    for (let i = 0; i < lines.length - 1; i++) {
+      let line = lines[i].trim();
+
+      if (!line.startsWith("data:")) continue;
+      line = line.slice(5).trim();
+      let chunkObj;
+      try {
+        if (line.startsWith("{")) {
+          chunkObj = JSON.parse(line);
+        } else {
+          continue;
+        }
+      } catch (error) {
+        console.error("Error parsing chunk:", error);
+        continue;
+      }
+      if (chunkObj.event === "message") {
+        if (
+          chunkObj.message.role === "assistant" &&
+          chunkObj.message.type === "answer"
+        ) {
+          let chunkContent = chunkObj.message.content;
+
+          if (chunkContent !== "") {
+            const chunkId = `chatcmpl-${Date.now()}`;
+            const chunkCreated = Math.floor(Date.now() / 1000);
+            res.write(
+              "data: " +
+                JSON.stringify({
+                  id: chunkId,
+                  object: "chat.completion.chunk",
+                  created: chunkCreated,
+                  model: data.model,
+                  choices: [
+                    {
+                      index: 0,
+                      delta: {
+                        content: chunkContent,
+                      },
+                      finish_reason: null,
+                    },
+                  ],
+                }) +
+                "\n\n"
+            );
+          }
+        }
+      } else if (chunkObj.event === "done") {
+        const chunkId = `chatcmpl-${Date.now()}`;
+        const chunkCreated = Math.floor(Date.now() / 1000);
+        res.write(
+          "data: " +
+            JSON.stringify({
+              id: chunkId,
+              object: "chat.completion.chunk",
+              created: chunkCreated,
+              model: data.model,
+              choices: [
+                {
+                  index: 0,
+                  delta: {},
+                  finish_reason: "stop",
+                },
+              ],
+            }) +
+            "\n\n"
+        );
+        res.write("data: [DONE]\n\n");
+        res.end();
+      } else if (chunkObj.event === "ping") {
+      } else if (chunkObj.event === "error") {
+        let errorMsg = chunkObj.code + " " + chunkObj.message;
+
+        if(chunkObj.error_information) {
+          errorMsg = chunkObj.error_information.err_msg;
+        }
+
+        console.error('Error: ', errorMsg);
+
+        res.write(
+                `data: ${JSON.stringify({ error: {
+                    error: `Unexpected from Coze API ${log_id}`,
+                    message: errorMsg
+                  }
+                })}\n\n`
+            );
+        res.write("data: [DONE]\n\n");
+        res.end();
+      }
+    }
+
+    buffer = lines[lines.length - 1];
   });
 }
 
@@ -84,8 +175,8 @@ app.use((req, res, next) => {
   if (req.method === 'OPTIONS') {
     return res.status(204).end();
   }
-  console.log('Request Method:', req.method); 
-  console.log('Request Path:', req.path);
+  console.info('Request Method:', req.method); 
+  console.info('Request Path:', req.path);
   next();
 });
 app.get("/", (req, res) => {
@@ -159,5 +250,5 @@ app.post("/v1/chat/completions", async (req, res) => {
 
 const server = app.listen(CONFIG.PORT, function () {
   let port = server.address().port
-  console.log('Ready! Listening all IP, port: %s. Example: at http://localhost:%s', port, port)
+  console.info('Ready! Listening all IP, port: %s. Example: at http://localhost:%s', port, port)
 });

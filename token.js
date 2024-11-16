@@ -16,6 +16,7 @@ const CONFIG = {
 
 // JWT token生成函数
 function generateJWTToken() {
+  console.info(CONFIG, 'CONFIG');
   const now = Math.floor(Date.now() / 1000);
   const payload = {
     iss: CONFIG.JWT_CONFIG.iss,
