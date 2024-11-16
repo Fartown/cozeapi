@@ -208,6 +208,25 @@ app.get("/", (req, res) => {
 });
 
 app.post("/v1/chat/completions", async (req, res) => {
+  // 把接受到的请求转成一个curl格式请求，并打印出来
+  // 获取请求头
+  const headers = req.headers;
+  // 获取请求体
+  const body = req.body;
+  // 构建 cURL 命令
+  let curlCommand = 'curl -X POST';
+  // 添加请求头
+  Object.keys(headers).forEach(header => {
+    curlCommand += ` -H "${header}: ${headers[header]}"`;
+  });
+  // 添加请求体
+  if (body) {
+    curlCommand += ` -d '${JSON.stringify(body)}'`;
+  }
+  // 添加 URL
+  curlCommand += ` "${req.protocol}://${req.get('host')}${req.originalUrl}"`;
+
+  console.info(curlCommand);
   // 检测 是否TokenConfig 以及 token 是否过期 如果没有或者过期 则重新获取
   if (!TokenConfig.access_token || TokenConfig.expires_in <= Date.now() / 1000) {
     TokenConfig = await getAccessToken();
