@@ -68,7 +68,7 @@ function handleStreamResponse(stream, res, model) {
                   id: chunkId,
                   object: "chat.completion.chunk",
                   created: chunkCreated,
-                  model: data.model,
+                  model: model,
                   choices: [
                     {
                       index: 0,
@@ -92,7 +92,7 @@ function handleStreamResponse(stream, res, model) {
               id: chunkId,
               object: "chat.completion.chunk",
               created: chunkCreated,
-              model: data.model,
+              model: model,
               choices: [
                 {
                   index: 0,
@@ -116,18 +116,32 @@ function handleStreamResponse(stream, res, model) {
         console.error('Error: ', errorMsg);
 
         res.write(
-                `data: ${JSON.stringify({ error: {
-                    error: `Unexpected from Coze API ${log_id}`,
-                    message: errorMsg
-                  }
-                })}\n\n`
-            );
+          `data: ${JSON.stringify({ error: {
+            message: errorMsg,
+            type: "stream_error"
+          }})}\n\n`
+        );
         res.write("data: [DONE]\n\n");
         res.end();
       }
     }
 
     buffer = lines[lines.length - 1];
+  });
+
+  // 添加错误处理
+  stream.on("error", (error) => {
+    console.error("Stream error:", error);
+    res.write(
+      `data: ${JSON.stringify({
+        error: {
+          message: "Stream processing error",
+          type: "stream_error"
+        }
+      })}\n\n`
+    );
+    res.write("data: [DONE]\n\n");
+    res.end();
   });
 }
 
