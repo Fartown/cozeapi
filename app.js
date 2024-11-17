@@ -1,41 +1,31 @@
 import express from "express";
 import bodyParser from "body-parser";
-import dotenv from "dotenv";
 import fetch from "node-fetch";
-import getAccessToken from "./token.js";
-dotenv.config();
-
-// 配置常量
-const CONFIG = {
-  API_BASE: process.env.COZE_API_BASE || "api.coze.com",
-  DEFAULT_BOT_ID: process.env.BOT_ID || "",
-  BOT_CONFIG: process.env.BOT_CONFIG ? JSON.parse(process.env.BOT_CONFIG) : {},
-  PORT: process.env.PORT || 3000
-};
-
-// CORS headers配置
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization",
-  "Access-Control-Max-Age": "86400",
-};
-
-// Token管理
-let TokenConfig = {
-  access_token: "",
-  expires_in: 0,
-};
-
+import getAccessToken from './token.js'
 const app = express();
 app.use(bodyParser.json());
+const coze_api_base = process.env.COZE_API_BASE || "api.coze.com";
+const default_bot_id = process.env.BOT_ID || "7347647950706802695";
+const botConfig = process.env.BOT_CONFIG ? JSON.parse(process.env.BOT_CONFIG) : {};
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers":
+    "DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization",
+  "Access-Control-Max-Age": "86400",
+};
+let TokenConfig = {
+  access_token: "",
+  expires_in: 0, // 1731677364 时间戳
+}
 
 app.use((req, res, next) => {
-  res.set(CORS_HEADERS);
+  res.set(corsHeaders);
   if (req.method === 'OPTIONS') {
     return res.status(204).end();
   }
-  console.info('Request Method:', req.path, req.method); 
+  console.log('Request Method:', req.method); 
+  console.log('Request Path:', req.path);
   next();
 });
 app.get("/", (req, res) => {
@@ -52,7 +42,6 @@ app.get("/", (req, res) => {
   `);
 });
 
-
 app.post("/v1/chat/completions", async (req, res) => {
   // 检测 是否TokenConfig 以及 token 是否过期 如果没有或者过期 则重新获取
   if (TokenConfig.access_token === "" || TokenConfig.expires_in === 0 || TokenConfig.expires_in < Date.now() / 1000) {
@@ -61,7 +50,6 @@ app.post("/v1/chat/completions", async (req, res) => {
   console.log(TokenConfig.access_token);
   try {
     const data = req.body;
-    console.info(JSON.stringify(data));
     const messages = data.messages;
     const model = data.model;
     const user = data.user !== undefined ? data.user : "apiuser";
@@ -82,7 +70,7 @@ app.post("/v1/chat/completions", async (req, res) => {
     const queryString = lastMessage.content;
     const stream = data.stream !== undefined ? data.stream : false;
     let requestBody;
-    const bot_id = model && CONFIG.BOT_CONFIG[model] ? CONFIG.BOT_CONFIG[model] : CONFIG.DEFAULT_BOT_ID;
+    const bot_id = model && botConfig[model] ? botConfig[model] : default_bot_id;
 
     requestBody = {
       query: queryString,
@@ -92,7 +80,7 @@ app.post("/v1/chat/completions", async (req, res) => {
       bot_id: bot_id,
       chat_history: chatHistory
     };
-    const coze_api_url = `https://${CONFIG.API_BASE}/open_api/v2/chat`;
+    const coze_api_url = `https://${coze_api_base}/open_api/v2/chat`;
     const resp = await fetch(coze_api_url, {
       method: "POST",
       headers: {
@@ -244,9 +232,8 @@ app.post("/v1/chat/completions", async (req, res) => {
                 system_fingerprint: "fp_2f57f81c11",
               };
               const jsonResponse = JSON.stringify(formattedResponse, null, 2);
-              console.info(jsonResponse);
-              
               res.set("Content-Type", "application/json");
+              console.info(jsonResponse)
               res.send(jsonResponse);
             } else {
               res.status(500).json({ error: "No answer message found." });
@@ -271,8 +258,7 @@ app.post("/v1/chat/completions", async (req, res) => {
     console.error("Error:", error);
   }
 });
-
-const server = app.listen(CONFIG.PORT, function () {
+const server = app.listen(process.env._BYTEFAAS_RUNTIME_PORT || 3000, function () {
   let port = server.address().port
-  console.info('Ready! Listening all IP, port: %s. Example: at http://localhost:%s', port, port)
+  console.log('Ready! Port is %s', port)
 });
