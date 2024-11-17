@@ -215,6 +215,7 @@ app.post("/v1/chat/completions", async (req, res) => {
   console.log(TokenConfig.access_token);
   try {
     const data = req.body;
+    console.info(JSON.stringify(data));
     const messages = data.messages;
     const model = data.model;
     const user = data.user !== undefined ? data.user : "apiuser";
