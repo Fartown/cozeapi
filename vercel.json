@@ -17,13 +17,5 @@
         "dest": "/app.js",
         "methods": ["GET"]
       }
-    ],
-    "functions": {
-        "app.js": {
-          "maxDuration": 59
-        },
-        "*.js": {
-          "maxDuration": 59
-        }
-    }
+    ]
 }
