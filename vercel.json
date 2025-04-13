@@ -17,5 +17,13 @@
         "dest": "/app.js",
         "methods": ["GET"]
       }
-    ]
-  }
+    ],
+    "functions": {
+        "app.js": {
+          "maxDuration": 59 // You must prefix functions in the src directory with /src/
+        },
+        "*.js": {
+          "maxDuration": 59 // You must prefix functions in the src directory with /src/
+        }
+    }
+}
