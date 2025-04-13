@@ -20,10 +20,10 @@
     ],
     "functions": {
         "app.js": {
-          "maxDuration": 59 // You must prefix functions in the src directory with /src/
+          "maxDuration": 59
         },
         "*.js": {
-          "maxDuration": 59 // You must prefix functions in the src directory with /src/
+          "maxDuration": 59
         }
     }
 }
